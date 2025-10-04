@@ -1,1 +1,1 @@
-[Blog 1](blog_1.md)
+[Favorite Books](books.md)
