@@ -8,11 +8,11 @@ Another unique aspect of Yellowstone is the numerous geysers and springs spread 
 
 <figure>
 <img src="images/yellowstone_animals.jpeg"/>
-<figcaption><p style="text-align:center; font-size:0.8em">Animals of Grand Teton and Yellowstone</p></figcaption>
+<figcaption><p style="text-align:center; font-weight:bold">Animals of Grand Teton and Yellowstone</p></figcaption>
 </figure>
 
 
 <figure>
 <img src="images/yellowstone_nature.JPG"/>
-<figcaption><p style="text-align:center; font-size:0.8em">Geysers and Springs</p></figcaption>
+<figcaption><p style="text-align:center; font-weight:bold">Geysers and Springs</p></figcaption>
 </figure>
