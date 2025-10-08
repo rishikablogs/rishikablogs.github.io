@@ -1,0 +1,245 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Probability Distribution Quiz</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            background-color: #f4f4f4;
+            color: #333;
+        }
+        .quiz-container {
+            background-color: #fff;
+            padding: 25px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            max-width: 600px;
+            margin: auto;
+        }
+        h2 {
+            color: #0056b3;
+            margin-bottom: 20px;
+        }
+        .question {
+            margin-bottom: 20px;
+            font-size: 1.1em;
+            font-weight: bold;
+        }
+        .option-item {
+            display: flex;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+        .option-item label {
+            flex: 0 0 120px; /* Fixed width for labels */
+            margin-right: 15px;
+            font-weight: normal;
+        }
+        .slider-container {
+            flex-grow: 1;
+            display: flex;
+            align-items: center;
+        }
+        .probability-slider {
+            flex-grow: 1;
+            -webkit-appearance: none;
+            width: 100%;
+            height: 8px;
+            background: #d3d3d3;
+            outline: none;
+            opacity: 0.7;
+            -webkit-transition: .2s;
+            transition: opacity .2s;
+            border-radius: 5px;
+        }
+        .probability-slider:hover {
+            opacity: 1;
+        }
+        .probability-slider::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background: #007bff;
+            cursor: pointer;
+        }
+        .probability-slider::-moz-range-thumb {
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background: #007bff;
+            cursor: pointer;
+        }
+        .probability-value {
+            margin-left: 15px;
+            width: 50px;
+            text-align: right;
+            font-weight: bold;
+        }
+        button {
+            background-color: #007bff;
+            color: white;
+            padding: 10px 15px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 1em;
+            margin-top: 15px;
+        }
+        button:hover {
+            background-color: #0056b3;
+        }
+        .score-display {
+            margin-top: 20px;
+            padding: 15px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            background-color: #e9ecef;
+            display: none; /* Hidden by default */
+        }
+        .score-display p {
+            margin: 5px 0;
+        }
+        .error-message {
+            color: red;
+            margin-top: 10px;
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="quiz-container">
+        <h2>Guess the Probability Distribution</h2>
+        <div class="question" id="question-text">
+            What is the probability distribution of outcomes for a fair six-sided die roll?
+        </div>
+        <div class="options" id="options-container">
+            <!-- Options will be dynamically loaded here -->
+        </div>
+        <button onclick="submitGuess()">Submit Guess</button>
+        <div class="error-message" id="error-message"></div>
+        <div class="score-display" id="score-display">
+            <h3>Results</h3>
+            <p>Your Guess: <span id="your-guess"></span></p>
+            <p>Correct Distribution: <span id="correct-distribution"></span></p>
+            <p>Your Score (Lower is better): <span id="score-value"></span></p>
+        </div>
+    </div>
+
+    <script>
+        const quizData = {
+            question: "What is the probability distribution of outcomes for a fair six-sided die roll?",
+            options: ["Outcome 1", "Outcome 2", "Outcome 3", "Outcome 4", "Outcome 5", "Outcome 6"],
+            correctDistribution: [1/6, 1/6, 1/6, 1/6, 1/6, 1/6] // Example: [0.1667, 0.1667, ...]
+        };
+
+        document.addEventListener('DOMContentLoaded', () => {
+            document.getElementById('question-text').textContent = quizData.question;
+            const optionsContainer = document.getElementById('options-container');
+            quizData.options.forEach((option, index) => {
+                const optionItem = document.createElement('div');
+                optionItem.classList.add('option-item');
+                optionItem.innerHTML = `
+                    <label for="slider-${index}">${option}:</label>
+                    <div class="slider-container">
+                        <input type="range" class="probability-slider" id="slider-${index}" data-index="${index}" min="0" max="100" step="0.1" value="0">
+                        <span class="probability-value" id="value-${index}">0.00%</span>
+                    </div>
+                `;
+                optionsContainer.appendChild(optionItem);
+            });
+
+            const sliders = document.querySelectorAll('.probability-slider');
+            const values = document.querySelectorAll('.probability-value');
+
+            sliders.forEach((slider, index) => {
+                slider.oninput = function() {
+                    updateSliderValues(index);
+                };
+            });
+
+            function updateSliderValues(changedIndex) {
+                let currentSum = 0;
+                const slidersArray = Array.from(sliders);
+
+                // Calculate sum of all sliders except the last one
+                for (let i = 0; i < slidersArray.length - 1; i++) {
+                    currentSum += parseFloat(slidersArray[i].value);
+                }
+
+                const lastSlider = slidersArray[slidersArray.length - 1];
+                let lastSliderValue = parseFloat(lastSlider.value);
+
+                if (changedIndex !== slidersArray.length - 1) {
+                    // If a non-last slider was changed, adjust the last slider
+                    const remaining = 100 - currentSum;
+                    if (remaining < 0) {
+                        // If sum exceeds 100, reduce the changed slider's value
+                        const excess = Math.abs(remaining);
+                        slidersArray[changedIndex].value = parseFloat(slidersArray[changedIndex].value) - excess;
+                        currentSum = 100 - parseFloat(lastSlider.value); // Recalculate sum
+                    }
+                    lastSlider.value = (100 - currentSum).toFixed(1);
+                } else {
+                    // If the last slider was changed, ensure sum doesn't exceed 100
+                    const totalSumExcludingLast = currentSum;
+                    if (totalSumExcludingLast + lastSliderValue > 100) {
+                        lastSlider.value = (100 - totalSumExcludingLast).toFixed(1);
+                    }
+                }
+
+                // Update all displayed values
+                slidersArray.forEach((slider, i) => {
+                    values[i].textContent = `${parseFloat(slider.value).toFixed(2)}%`;
+                });
+            }
+
+            // Initial update to set values
+            updateSliderValues(-1); // Call with -1 to not mark any slider as changed initially
+        });
+
+        function calculateScore(guess, correct) {
+            // Using Squared Euclidean Distance for simplicity
+            // Sum of (guess_i - correct_i)^2
+            let score = 0;
+            for (let i = 0; i < guess.length; i++) {
+                score += Math.pow(guess[i] - correct[i], 2);
+            }
+            return score.toFixed(4);
+        }
+
+        function submitGuess() {
+            const sliders = document.querySelectorAll('.probability-slider');
+            let userGuessPercentages = [];
+            let sum = 0;
+            let errorMessage = document.getElementById('error-message');
+            errorMessage.style.display = 'none';
+
+            sliders.forEach(slider => {
+                const value = parseFloat(slider.value);
+                userGuessPercentages.push(value);
+                sum += value;
+            });
+
+            if (Math.abs(sum - 100) > 0.01) { // Allow for minor floating point inaccuracies
+                errorMessage.textContent = `Your probabilities sum to ${sum.toFixed(2)}%. They must sum to 100%.`;
+                errorMessage.style.display = 'block';
+                return;
+            }
+
+            const userGuess = userGuessPercentages.map(p => p / 100); // Convert to probabilities
+
+            const score = calculateScore(userGuess, quizData.correctDistribution);
+
+            document.getElementById('your-guess').textContent = userGuessPercentages.map(p => `${p.toFixed(2)}%`).join(', ');
+            document.getElementById('correct-distribution').textContent = quizData.correctDistribution.map(p => `${(p * 100).toFixed(2)}%`).join(', ');
+            document.getElementById('score-value').textContent = score;
+            document.getElementById('score-display').style.display = 'block';
+        }
+    </script>
+</body>
+</html>
