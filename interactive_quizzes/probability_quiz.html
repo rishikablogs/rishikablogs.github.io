@@ -121,6 +121,7 @@
             <!-- Options will be dynamically loaded here -->
         </div>
         <button onclick="submitGuess()">Submit Guess</button>
+        <button onclick="nextQuestion()" id="next-question-btn" style="display:none;">Next Question</button>
         <div class="error-message" id="error-message"></div>
         <div class="score-display" id="score-display">
             <h3>Results</h3>
@@ -131,23 +132,36 @@
     </div>
 
     <script>
-        const quizData = {
-            question: "What is the probability distribution of outcomes for a fair six-sided die roll?",
-            options: ["Outcome 1", "Outcome 2", "Outcome 3", "Outcome 4", "Outcome 5", "Outcome 6"],
-            correctDistribution: [1/6, 1/6, 1/6, 1/6, 1/6, 1/6] // Example: [0.1667, 0.1667, ...]
-        };
+        let quizData = []; // Will store all quiz questions
+        let currentQuizIndex = 0; // To keep track of the current question
 
         document.addEventListener('DOMContentLoaded', () => {
-            document.getElementById('question-text').textContent = quizData.question;
+            fetch('quiz_data.json')
+                .then(response => response.json())
+                .then(data => {
+                    quizData = data;
+                    loadQuizQuestion(currentQuizIndex);
+                })
+                .catch(error => {
+                    console.error('Error loading quiz data:', error);
+                    document.getElementById('question-text').textContent = 'Error loading quiz. Please try again later.';
+                });
+        });
+
+        function loadQuizQuestion(index) {
+            const question = quizData[index];
+            document.getElementById('question-text').textContent = question.question;
             const optionsContainer = document.getElementById('options-container');
-            quizData.options.forEach((option, index) => {
+            optionsContainer.innerHTML = ''; // Clear previous options
+
+            question.options.forEach((option, i) => {
                 const optionItem = document.createElement('div');
                 optionItem.classList.add('option-item');
                 optionItem.innerHTML = `
-                    <label for="slider-${index}">${option}:</label>
+                    <label for="slider-${i}">${option}:</label>
                     <div class="slider-container">
-                        <input type="range" class="probability-slider" id="slider-${index}" data-index="${index}" min="0" max="100" step="0.1" value="0">
-                        <span class="probability-value" id="value-${index}">0.00%</span>
+                        <input type="range" class="probability-slider" id="slider-${i}" data-index="${i}" min="0" max="100" step="0.1" value="0">
+                        <span class="probability-value" id="value-${i}">0.00%</span>
                     </div>
                 `;
                 optionsContainer.appendChild(optionItem);
@@ -156,51 +170,53 @@
             const sliders = document.querySelectorAll('.probability-slider');
             const values = document.querySelectorAll('.probability-value');
 
-            sliders.forEach((slider, index) => {
+            sliders.forEach((slider, i) => {
                 slider.oninput = function() {
-                    updateSliderValues(index);
+                    updateSliderValues(i);
                 };
             });
 
-            function updateSliderValues(changedIndex) {
-                let currentSum = 0;
-                const slidersArray = Array.from(sliders);
-
-                // Calculate sum of all sliders except the last one
-                for (let i = 0; i < slidersArray.length - 1; i++) {
-                    currentSum += parseFloat(slidersArray[i].value);
-                }
-
-                const lastSlider = slidersArray[slidersArray.length - 1];
-                let lastSliderValue = parseFloat(lastSlider.value);
-
-                if (changedIndex !== slidersArray.length - 1) {
-                    // If a non-last slider was changed, adjust the last slider
-                    const remaining = 100 - currentSum;
-                    if (remaining < 0) {
-                        // If sum exceeds 100, reduce the changed slider's value
-                        const excess = Math.abs(remaining);
-                        slidersArray[changedIndex].value = parseFloat(slidersArray[changedIndex].value) - excess;
-                        currentSum = 100 - parseFloat(lastSlider.value); // Recalculate sum
-                    }
-                    lastSlider.value = (100 - currentSum).toFixed(1);
-                } else {
-                    // If the last slider was changed, ensure sum doesn't exceed 100
-                    const totalSumExcludingLast = currentSum;
-                    if (totalSumExcludingLast + lastSliderValue > 100) {
-                        lastSlider.value = (100 - totalSumExcludingLast).toFixed(1);
-                    }
-                }
-
-                // Update all displayed values
-                slidersArray.forEach((slider, i) => {
-                    values[i].textContent = `${parseFloat(slider.value).toFixed(2)}%`;
-                });
-            }
-
             // Initial update to set values
             updateSliderValues(-1); // Call with -1 to not mark any slider as changed initially
-        });
+        }
+
+        function updateSliderValues(changedIndex) {
+            let currentSum = 0;
+            const sliders = document.querySelectorAll('.probability-slider');
+            const values = document.querySelectorAll('.probability-value');
+            const slidersArray = Array.from(sliders);
+
+            // Calculate sum of all sliders except the last one
+            for (let i = 0; i < slidersArray.length - 1; i++) {
+                currentSum += parseFloat(slidersArray[i].value);
+            }
+
+            const lastSlider = slidersArray[slidersArray.length - 1];
+            let lastSliderValue = parseFloat(lastSlider.value);
+
+            if (changedIndex !== slidersArray.length - 1) {
+                // If a non-last slider was changed, adjust the last slider
+                const remaining = 100 - currentSum;
+                if (remaining < 0) {
+                    // If sum exceeds 100, reduce the changed slider's value
+                    const excess = Math.abs(remaining);
+                    slidersArray[changedIndex].value = parseFloat(slidersArray[changedIndex].value) - excess;
+                    currentSum = 100 - parseFloat(lastSlider.value); // Recalculate sum
+                }
+                lastSlider.value = (100 - currentSum).toFixed(1);
+            } else {
+                // If the last slider was changed, ensure sum doesn't exceed 100
+                const totalSumExcludingLast = currentSum;
+                if (totalSumExcludingLast + lastSliderValue > 100) {
+                    lastSlider.value = (100 - totalSumExcludingLast).toFixed(1);
+                }
+            }
+
+            // Update all displayed values
+            slidersArray.forEach((slider, i) => {
+                values[i].textContent = `${parseFloat(slider.value).toFixed(2)}%`;
+            });
+        }
 
         function calculateScore(guess, correct) {
             // Using Squared Euclidean Distance for simplicity
@@ -232,13 +248,29 @@
             }
 
             const userGuess = userGuessPercentages.map(p => p / 100); // Convert to probabilities
-
-            const score = calculateScore(userGuess, quizData.correctDistribution);
+            const currentQuestion = quizData[currentQuizIndex];
+            const score = calculateScore(userGuess, currentQuestion.correctDistribution);
 
             document.getElementById('your-guess').textContent = userGuessPercentages.map(p => `${p.toFixed(2)}%`).join(', ');
-            document.getElementById('correct-distribution').textContent = quizData.correctDistribution.map(p => `${(p * 100).toFixed(2)}%`).join(', ');
+            document.getElementById('correct-distribution').textContent = currentQuestion.correctDistribution.map(p => `${(p * 100).toFixed(2)}%`).join(', ');
             document.getElementById('score-value').textContent = score;
             document.getElementById('score-display').style.display = 'block';
+            document.getElementById('next-question-btn').style.display = 'inline-block'; // Show next question button
+        }
+
+        function nextQuestion() {
+            currentQuizIndex++;
+            if (currentQuizIndex < quizData.length) {
+                loadQuizQuestion(currentQuizIndex);
+                document.getElementById('score-display').style.display = 'none'; // Hide results
+                document.getElementById('next-question-btn').style.display = 'none'; // Hide next question button
+            } else {
+                alert('You have completed all questions! Starting over.');
+                currentQuizIndex = 0; // Reset for another round
+                loadQuizQuestion(currentQuizIndex);
+                document.getElementById('score-display').style.display = 'none';
+                document.getElementById('next-question-btn').style.display = 'none';
+            }
         }
     </script>
 </body>

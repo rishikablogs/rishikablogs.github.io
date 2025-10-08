@@ -1,0 +1,20 @@
+[
+    {
+        "id": 1,
+        "question": "What is the probability distribution of outcomes for a fair six-sided die roll?",
+        "options": ["Outcome 1", "Outcome 2", "Outcome 3", "Outcome 4", "Outcome 5", "Outcome 6"],
+        "correctDistribution": [0.1667, 0.1667, 0.1667, 0.1667, 0.1667, 0.1667]
+    },
+    {
+        "id": 2,
+        "question": "What is the probability distribution of drawing a specific suit (Hearts, Diamonds, Clubs, Spades) from a standard 52-card deck?",
+        "options": ["Hearts", "Diamonds", "Clubs", "Spades"],
+        "correctDistribution": [0.25, 0.25, 0.25, 0.25]
+    },
+    {
+        "id": 3,
+        "question": "A bag contains 5 red balls, 3 blue balls, and 2 green balls. What is the probability distribution of drawing each color?",
+        "options": ["Red", "Blue", "Green"],
+        "correctDistribution": [0.5, 0.3, 0.2]
+    }
+]
