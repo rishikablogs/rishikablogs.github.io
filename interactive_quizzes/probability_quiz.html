@@ -127,7 +127,7 @@
             <h3>Results</h3>
             <p>Your Guess: <span id="your-guess"></span></p>
             <p>Correct Distribution: <span id="correct-distribution"></span></p>
-            <p>Your Score (Lower is better): <span id="score-value"></span></p>
+            <p>Your Score (Higher is better): <span id="score-value"></span></p>
         </div>
     </div>
 
@@ -218,16 +218,42 @@
             });
         }
 
-        function calculateScore(guess, correct) {
-            // Using Squared Euclidean Distance for simplicity
-            // Sum of (guess_i - correct_i)^2
-            let score = 0;
-            for (let i = 0; i < guess.length; i++) {
-                score += Math.pow(guess[i] - correct[i], 2);
+        // Helper function for Kullback-Leibler Divergence
+        function klDivergence(p, q) {
+            let divergence = 0;
+            for (let i = 0; i < p.length; i++) {
+                const pi = p[i];
+                const qi = q[i];
+
+                if (pi === 0) {
+                    // If p_i is 0, the term p_i * log(p_i / q_i) is 0.
+                    continue;
+                }
+                if (qi === 0) {
+                    // If p_i > 0 and q_i = 0, KL divergence is infinite.
+                    return Infinity;
+                }
+                // Both pi and qi are guaranteed to be > 0 here
+                divergence += pi * Math.log2(pi / qi);
             }
-            return score.toFixed(4);
+            return divergence;
         }
 
+        // Jensen-Shannon Divergence
+        function jensenShannonDivergence(p, q) {
+            const m = p.map((pi, i) => (pi + q[i]) / 2);
+            const jsd = (klDivergence(p, m) + klDivergence(q, m)) / 2;
+            return jsd;
+        }
+
+        function calculateScore(guess, correct) {
+            // Using Jensen-Shannon Divergence, transformed to be between 0 and 1 (higher is better)
+            const jsd = jensenShannonDivergence(guess, correct);
+            // Max JSD with log base 2 is 1. So, 1 - JSD will give a score from 0 to 1, where 1 is perfect.
+            const score = 1 - jsd;
+            return score.toFixed(4);
+        }
+    
         function submitGuess() {
             const sliders = document.querySelectorAll('.probability-slider');
             let userGuessPercentages = [];
