@@ -154,16 +154,6 @@
                     optionsContainer.appendChild(optionItem);
                 });
 
-                // Populate datalists with correct answer tickmarks
-                const correctDistribution = questionData.correctDistribution;
-                correctDistribution.forEach((correctProb, i) => {
-                    const datalist = document.getElementById(`tickmarks-${qIndex}-${i}`);
-                    if (datalist) {
-                        const option = document.createElement('option');
-                        option.value = (correctProb * 100).toFixed(1); // Convert to percentage for slider value
-                        datalist.appendChild(option);
-                    }
-                });
             });
 
             // Attach event listeners to all sliders after they are created
@@ -320,6 +310,19 @@
             document.getElementById(`correct-distribution-${qIndex}`).textContent = questionData.correctDistribution.map(p => `${(p * 100).toFixed(2)}%`).join(', ');
             document.getElementById(`score-value-${qIndex}`).textContent = score;
             document.getElementById(`score-display-${qIndex}`).style.display = 'block';
+
+            // Populate datalists with correct answer tickmarks after submission
+            const correctDistribution = questionData.correctDistribution;
+            correctDistribution.forEach((correctProb, i) => {
+                const datalist = document.getElementById(`tickmarks-${qIndex}-${i}`);
+                if (datalist) {
+                    // Clear existing options to prevent duplicates if user resubmits
+                    datalist.innerHTML = '';
+                    const option = document.createElement('option');
+                    option.value = (correctProb * 100).toFixed(1); // Convert to percentage for slider value
+                    datalist.appendChild(option);
+                }
+            });
         }
     </script>
 </body>
