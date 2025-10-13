@@ -38,48 +38,6 @@
             margin-right: 15px;
             font-weight: normal;
         }
-        .slider-container {
-            flex-grow: 1;
-            display: flex;
-            align-items: center;
-        }
-        .probability-slider {
-            flex-grow: 1;
-            -webkit-appearance: none;
-            width: 100%;
-            height: 8px;
-            background: #d3d3d3;
-            outline: none;
-            opacity: 0.7;
-            -webkit-transition: .2s;
-            transition: opacity .2s;
-            border-radius: 5px;
-        }
-        .probability-slider:hover {
-            opacity: 1;
-        }
-        .probability-slider::-webkit-slider-thumb {
-            -webkit-appearance: none;
-            appearance: none;
-            width: 20px;
-            height: 20px;
-            border-radius: 50%;
-            background: #007bff;
-            cursor: pointer;
-        }
-        .probability-slider::-moz-range-thumb {
-            width: 20px;
-            height: 20px;
-            border-radius: 50%;
-            background: #007bff;
-            cursor: pointer;
-        }
-        .probability-value {
-            margin-left: 15px;
-            width: 50px;
-            text-align: right;
-            font-weight: bold;
-        }
         button {
             background-color: #007bff;
             color: white;
@@ -187,17 +145,29 @@
                     optionItem.classList.add('option-item');
                     optionItem.innerHTML = `
                         <label for="slider-${qIndex}-${i}">${option}:</label>
-                        <div class="slider-container">
-                            <input type="range" class="probability-slider" id="slider-${qIndex}-${i}" data-question-index="${qIndex}" data-option-index="${i}" min="0" max="100" step="0.1" value="0">
-                            <span class="probability-value" id="value-${qIndex}-${i}">0.00%</span>
+                        <div>
+                            <input type="range" id="slider-${qIndex}-${i}" data-question-index="${qIndex}" data-option-index="${i}" min="0" max="100" step="0.1" value="0" list="tickmarks-${qIndex}-${i}">
+                            <span id="value-${qIndex}-${i}">0.00%</span>
+                            <datalist id="tickmarks-${qIndex}-${i}"></datalist>
                         </div>
                     `;
                     optionsContainer.appendChild(optionItem);
                 });
+
+                // Populate datalists with correct answer tickmarks
+                const correctDistribution = questionData.correctDistribution;
+                correctDistribution.forEach((correctProb, i) => {
+                    const datalist = document.getElementById(`tickmarks-${qIndex}-${i}`);
+                    if (datalist) {
+                        const option = document.createElement('option');
+                        option.value = (correctProb * 100).toFixed(1); // Convert to percentage for slider value
+                        datalist.appendChild(option);
+                    }
+                });
             });
 
             // Attach event listeners to all sliders after they are created
-            const sliders = document.querySelectorAll('.probability-slider');
+            const sliders = document.querySelectorAll('input[type="range"]');
             sliders.forEach(slider => {
                 slider.oninput = function() {
                     const qIndex = parseInt(this.dataset.questionIndex);
@@ -211,8 +181,8 @@
         }
 
         function updateSliderValues(questionIndex, changedOptionIndex) {
-            const slidersForQuestion = document.querySelectorAll(`.probability-slider[data-question-index="${questionIndex}"]`);
-            const valuesForQuestion = document.querySelectorAll(`.probability-value[id^="value-${questionIndex}-"]`);
+            const slidersForQuestion = document.querySelectorAll(`input[type="range"][data-question-index="${questionIndex}"]`);
+            const valuesForQuestion = document.querySelectorAll(`span[id^="value-${questionIndex}-"]`);
             const slidersArray = Array.from(slidersForQuestion);
 
             if (slidersArray.length === 0) return;
@@ -324,7 +294,7 @@
         }
     
         function submitGuess(qIndex) {
-            const slidersForQuestion = document.querySelectorAll(`.probability-slider[data-question-index="${qIndex}"]`);
+            const slidersForQuestion = document.querySelectorAll(`input[type="range"][data-question-index="${qIndex}"]`);
             let userGuessPercentages = [];
             let sum = 0;
             const errorMessage = document.getElementById(`error-message-${qIndex}`);
