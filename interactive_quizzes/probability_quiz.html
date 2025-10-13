@@ -109,114 +109,183 @@
             margin-top: 10px;
             display: none;
         }
+        .quiz-question-block {
+            background-color: #f9f9f9;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 25px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+        }
+        .quiz-question-block h4 {
+            color: #0056b3;
+            margin-top: 0;
+            margin-bottom: 15px;
+        }
+        .score-display {
+            margin-top: 20px;
+            padding: 15px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            background-color: #e9ecef;
+            display: none; /* Hidden by default */
+        }
     </style>
 </head>
 <body>
     <div class="quiz-container">
         <h2>Guess the Probability Distribution</h2>
-        <div class="question" id="question-text">
-            What is the probability distribution of outcomes for a fair six-sided die roll?
-        </div>
-        <div class="options" id="options-container">
-            <!-- Options will be dynamically loaded here -->
-        </div>
-        <button onclick="submitGuess()">Submit Guess</button>
-        <button onclick="nextQuestion()" id="next-question-btn" style="display:none;">Next Question</button>
-        <div class="error-message" id="error-message"></div>
-        <div class="score-display" id="score-display">
-            <h3>Results</h3>
-            <p>Your Guess: <span id="your-guess"></span></p>
-            <p>Correct Distribution: <span id="correct-distribution"></span></p>
-            <p>Your Score (Higher is better): <span id="score-value"></span></p>
+        <div id="quiz-questions-container">
+            <!-- All questions will be dynamically loaded here -->
         </div>
     </div>
 
     <script>
         let quizData = []; // Will store all quiz questions
-        let currentQuizIndex = 0; // To keep track of the current question
 
         document.addEventListener('DOMContentLoaded', () => {
             fetch('quiz_data.json')
                 .then(response => response.json())
                 .then(data => {
                     quizData = data;
-                    loadQuizQuestion(currentQuizIndex);
+                    loadAllQuizQuestions();
                 })
                 .catch(error => {
                     console.error('Error loading quiz data:', error);
-                    document.getElementById('question-text').textContent = 'Error loading quiz. Please try again later.';
+                    document.getElementById('quiz-questions-container').innerHTML = '<p>Error loading quiz. Please try again later.</p>';
                 });
         });
 
-        function loadQuizQuestion(index) {
-            const question = quizData[index];
-            document.getElementById('question-text').textContent = question.question;
-            const optionsContainer = document.getElementById('options-container');
-            optionsContainer.innerHTML = ''; // Clear previous options
+        function loadAllQuizQuestions() {
+            const quizQuestionsContainer = document.getElementById('quiz-questions-container');
+            quizQuestionsContainer.innerHTML = ''; // Clear previous content
 
-            question.options.forEach((option, i) => {
-                const optionItem = document.createElement('div');
-                optionItem.classList.add('option-item');
-                optionItem.innerHTML = `
-                    <label for="slider-${i}">${option}:</label>
-                    <div class="slider-container">
-                        <input type="range" class="probability-slider" id="slider-${i}" data-index="${i}" min="0" max="100" step="0.1" value="0">
-                        <span class="probability-value" id="value-${i}">0.00%</span>
+            quizData.forEach((questionData, qIndex) => {
+                const questionDiv = document.createElement('div');
+                questionDiv.classList.add('quiz-question-block');
+                questionDiv.innerHTML = `
+                    <div class="question">
+                        ${qIndex + 1}. ${questionData.question}
+                    </div>
+                    <div class="options" id="options-container-${qIndex}">
+                        <!-- Options will be dynamically loaded here for each question -->
+                    </div>
+                    <div class="error-message" id="error-message-${qIndex}" style="display:none;"></div>
+                    <button onclick="submitGuess(${qIndex})">Submit Guess</button>
+                    <div class="score-display" id="score-display-${qIndex}" style="display:none;">
+                        <h4>Results for Question ${qIndex + 1}</h4>
+                        <p>Your Guess: <span id="your-guess-${qIndex}"></span></p>
+                        <p>Correct Distribution: <span id="correct-distribution-${qIndex}"></span></p>
+                        <p>Your Score (Higher is better): <span id="score-value-${qIndex}"></span></p>
                     </div>
                 `;
-                optionsContainer.appendChild(optionItem);
+                quizQuestionsContainer.appendChild(questionDiv);
+
+                const optionsContainer = document.getElementById(`options-container-${qIndex}`);
+                questionData.options.forEach((option, i) => {
+                    const optionItem = document.createElement('div');
+                    optionItem.classList.add('option-item');
+                    optionItem.innerHTML = `
+                        <label for="slider-${qIndex}-${i}">${option}:</label>
+                        <div class="slider-container">
+                            <input type="range" class="probability-slider" id="slider-${qIndex}-${i}" data-question-index="${qIndex}" data-option-index="${i}" min="0" max="100" step="0.1" value="0">
+                            <span class="probability-value" id="value-${qIndex}-${i}">0.00%</span>
+                        </div>
+                    `;
+                    optionsContainer.appendChild(optionItem);
+                });
             });
 
+            // Attach event listeners to all sliders after they are created
             const sliders = document.querySelectorAll('.probability-slider');
-            const values = document.querySelectorAll('.probability-value');
-
-            sliders.forEach((slider, i) => {
+            sliders.forEach(slider => {
                 slider.oninput = function() {
-                    updateSliderValues(i);
+                    const qIndex = parseInt(this.dataset.questionIndex);
+                    const oIndex = parseInt(this.dataset.optionIndex);
+                    updateSliderValues(qIndex, oIndex);
                 };
             });
 
-            // Initial update to set values
-            updateSliderValues(-1); // Call with -1 to not mark any slider as changed initially
+            // Initial update for all sliders
+            quizData.forEach((_, qIndex) => updateSliderValues(qIndex, -1));
         }
 
-        function updateSliderValues(changedIndex) {
-            let currentSum = 0;
-            const sliders = document.querySelectorAll('.probability-slider');
-            const values = document.querySelectorAll('.probability-value');
-            const slidersArray = Array.from(sliders);
+        function updateSliderValues(questionIndex, changedOptionIndex) {
+            const slidersForQuestion = document.querySelectorAll(`.probability-slider[data-question-index="${questionIndex}"]`);
+            const valuesForQuestion = document.querySelectorAll(`.probability-value[id^="value-${questionIndex}-"]`);
+            const slidersArray = Array.from(slidersForQuestion);
 
-            // Calculate sum of all sliders except the last one
-            for (let i = 0; i < slidersArray.length - 1; i++) {
-                currentSum += parseFloat(slidersArray[i].value);
-            }
+            if (slidersArray.length === 0) return;
 
-            const lastSlider = slidersArray[slidersArray.length - 1];
-            let lastSliderValue = parseFloat(lastSlider.value);
-
-            if (changedIndex !== slidersArray.length - 1) {
-                // If a non-last slider was changed, adjust the last slider
-                const remaining = 100 - currentSum;
-                if (remaining < 0) {
-                    // If sum exceeds 100, reduce the changed slider's value
-                    const excess = Math.abs(remaining);
-                    slidersArray[changedIndex].value = parseFloat(slidersArray[changedIndex].value) - excess;
-                    currentSum = 100 - parseFloat(lastSlider.value); // Recalculate sum
-                }
-                lastSlider.value = (100 - currentSum).toFixed(1);
-            } else {
-                // If the last slider was changed, ensure sum doesn't exceed 100
-                const totalSumExcludingLast = currentSum;
-                if (totalSumExcludingLast + lastSliderValue > 100) {
-                    lastSlider.value = (100 - totalSumExcludingLast).toFixed(1);
+            // Handle initial load: distribute 100% evenly among all sliders
+            if (changedOptionIndex === -1) {
+                const initialValue = 100 / slidersArray.length;
+                slidersArray.forEach(slider => {
+                    slider.value = initialValue.toFixed(1);
+                });
+                // Ensure the sum is exactly 100 after initial distribution
+                let currentSum = slidersArray.reduce((acc, slider) => acc + parseFloat(slider.value), 0);
+                if (Math.abs(currentSum - 100) > 0.01 && slidersArray.length > 0) {
+                    slidersArray[slidersArray.length - 1].value = (parseFloat(slidersArray[slidersArray.length - 1].value) + (100 - currentSum)).toFixed(1);
                 }
             }
 
-            // Update all displayed values
+            // If a specific slider was changed by the user
+            if (changedOptionIndex !== -1) {
+                let changedSlider = slidersArray[changedOptionIndex];
+                let changedValue = parseFloat(changedSlider.value);
+
+                // Calculate the sum of all other sliders
+                let sumOfOtherSliders = 0;
+                slidersArray.forEach((slider, i) => {
+                    if (i !== changedOptionIndex) {
+                        sumOfOtherSliders += parseFloat(slider.value);
+                    }
+                });
+
+                // Calculate the target sum for the other sliders
+                let targetSumForOthers = 100 - changedValue;
+
+                // Adjust other sliders proportionally
+                if (sumOfOtherSliders > 0) {
+                    let scaleFactor = targetSumForOthers / sumOfOtherSliders;
+                    slidersArray.forEach((slider, i) => {
+                        if (i !== changedOptionIndex) {
+                            let newValue = parseFloat(slider.value) * scaleFactor;
+                            slider.value = Math.max(0, Math.min(100, newValue)).toFixed(1);
+                        }
+                    });
+                } else if (targetSumForOthers > 0 && slidersArray.length > 1) {
+                    // If all other sliders were 0, and we need to distribute targetSumForOthers
+                    // Distribute evenly among them
+                    let numOtherSliders = slidersArray.length - 1;
+                    let valuePerOtherSlider = targetSumForOthers / numOtherSliders;
+                    slidersArray.forEach((slider, i) => {
+                        if (i !== changedOptionIndex) {
+                            slider.value = Math.max(0, Math.min(100, valuePerOtherSlider)).toFixed(1);
+                        }
+                    });
+                }
+            }
+
+            // Final pass to ensure sum is exactly 100% due to floating point inaccuracies
+            let finalSum = 0;
+            slidersArray.forEach(slider => {
+                finalSum += parseFloat(slider.value);
+            });
+
+            if (Math.abs(finalSum - 100) > 0.01 && slidersArray.length > 0) {
+                let lastSlider = slidersArray[slidersArray.length - 1];
+                let lastSliderValue = parseFloat(lastSlider.value);
+                lastSlider.value = (lastSliderValue + (100 - finalSum)).toFixed(1);
+            }
+
+            // Update all displayed values for the current question
             slidersArray.forEach((slider, i) => {
-                values[i].textContent = `${parseFloat(slider.value).toFixed(2)}%`;
+                valuesForQuestion[i].textContent = `${parseFloat(slider.value).toFixed(2)}%`;
             });
         }
+
 
         // Helper function for Kullback-Leibler Divergence
         function klDivergence(p, q) {
@@ -254,49 +323,33 @@
             return score.toFixed(4);
         }
     
-        function submitGuess() {
-            const sliders = document.querySelectorAll('.probability-slider');
+        function submitGuess(qIndex) {
+            const slidersForQuestion = document.querySelectorAll(`.probability-slider[data-question-index="${qIndex}"]`);
             let userGuessPercentages = [];
             let sum = 0;
-            let errorMessage = document.getElementById('error-message');
+            const errorMessage = document.getElementById(`error-message-${qIndex}`);
             errorMessage.style.display = 'none';
 
-            sliders.forEach(slider => {
+            slidersForQuestion.forEach(slider => {
                 const value = parseFloat(slider.value);
                 userGuessPercentages.push(value);
                 sum += value;
             });
 
             if (Math.abs(sum - 100) > 0.01) { // Allow for minor floating point inaccuracies
-                errorMessage.textContent = `Your probabilities sum to ${sum.toFixed(2)}%. They must sum to 100%.`;
+                errorMessage.textContent = `Your probabilities for this question sum to ${sum.toFixed(2)}%. They must sum to 100%.`;
                 errorMessage.style.display = 'block';
                 return;
             }
 
             const userGuess = userGuessPercentages.map(p => p / 100); // Convert to probabilities
-            const currentQuestion = quizData[currentQuizIndex];
-            const score = calculateScore(userGuess, currentQuestion.correctDistribution);
+            const questionData = quizData[qIndex];
+            const score = calculateScore(userGuess, questionData.correctDistribution);
 
-            document.getElementById('your-guess').textContent = userGuessPercentages.map(p => `${p.toFixed(2)}%`).join(', ');
-            document.getElementById('correct-distribution').textContent = currentQuestion.correctDistribution.map(p => `${(p * 100).toFixed(2)}%`).join(', ');
-            document.getElementById('score-value').textContent = score;
-            document.getElementById('score-display').style.display = 'block';
-            document.getElementById('next-question-btn').style.display = 'inline-block'; // Show next question button
-        }
-
-        function nextQuestion() {
-            currentQuizIndex++;
-            if (currentQuizIndex < quizData.length) {
-                loadQuizQuestion(currentQuizIndex);
-                document.getElementById('score-display').style.display = 'none'; // Hide results
-                document.getElementById('next-question-btn').style.display = 'none'; // Hide next question button
-            } else {
-                alert('You have completed all questions! Starting over.');
-                currentQuizIndex = 0; // Reset for another round
-                loadQuizQuestion(currentQuizIndex);
-                document.getElementById('score-display').style.display = 'none';
-                document.getElementById('next-question-btn').style.display = 'none';
-            }
+            document.getElementById(`your-guess-${qIndex}`).textContent = userGuessPercentages.map(p => `${p.toFixed(2)}%`).join(', ');
+            document.getElementById(`correct-distribution-${qIndex}`).textContent = questionData.correctDistribution.map(p => `${(p * 100).toFixed(2)}%`).join(', ');
+            document.getElementById(`score-value-${qIndex}`).textContent = score;
+            document.getElementById(`score-display-${qIndex}`).style.display = 'block';
         }
     </script>
 </body>
