@@ -96,10 +96,15 @@
         <div id="quiz-questions-container">
             <!-- All questions will be dynamically loaded here -->
         </div>
+        <div id="final-score-display" class="score-display" style="display:none;">
+            <h3>Overall Quiz Results</h3>
+            <p>Average Score: <span id="average-score-value"></span></p>
+        </div>
     </div>
 
     <script>
         let quizData = []; // Will store all quiz questions
+        let questionScores = []; // Will store scores for each question
 
         document.addEventListener('DOMContentLoaded', () => {
             fetch('quiz_data.json')
@@ -342,7 +347,7 @@
             let userGuessPercentages = [];
             let sum = 0;
             const errorMessage = document.getElementById(`error-message-${qIndex}`);
-            errorMessage.style.display = 'none'; // Ensure it's hidden on submit, as real-time handles it
+            errorMessage.style.display = 'none';
 
             slidersForQuestion.forEach(slider => {
                 const value = parseFloat(slider.value);
@@ -350,17 +355,16 @@
                 sum += value;
             });
 
-            // This check is primarily for final submission if the user somehow bypasses real-time validation
-            // or if floating point inaccuracies cause a slight deviation at the very end.
             if (Math.abs(sum - 100) > 0.01) {
                 errorMessage.textContent = `Your probabilities for this question sum to ${sum.toFixed(0)}%. They must sum to 100%. Please adjust.`;
                 errorMessage.style.display = 'block';
                 return;
             }
 
-            const userGuess = userGuessPercentages.map(p => p / 100); // Convert to probabilities
+            const userGuess = userGuessPercentages.map(p => p / 100);
             const questionData = quizData[qIndex];
             const score = calculateScore(userGuess, questionData.correctDistribution);
+            questionScores[qIndex] = parseFloat(score); // Store the score for this question
 
             document.getElementById(`your-guess-${qIndex}`).textContent = userGuessPercentages.map(p => `${p.toFixed(0)}%`).join(', ');
             document.getElementById(`correct-distribution-${qIndex}`).textContent = questionData.correctDistribution.map(p => `${(p * 100).toFixed(0)}%`).join(', ');
@@ -372,13 +376,20 @@
             correctDistribution.forEach((correctProb, i) => {
                 const datalist = document.getElementById(`tickmarks-${qIndex}-${i}`);
                 if (datalist) {
-                    // Clear existing options to prevent duplicates if user resubmits
                     datalist.innerHTML = '';
                     const option = document.createElement('option');
-                    option.value = (correctProb * 100).toFixed(0); // Convert to percentage for slider value
+                    option.value = (correctProb * 100).toFixed(0);
                     datalist.appendChild(option);
                 }
             });
+
+            // Check if all questions have been answered
+            if (questionScores.filter(s => s !== undefined).length === quizData.length) {
+                const totalScore = questionScores.reduce((acc, s) => acc + s, 0);
+                const averageScore = totalScore / quizData.length;
+                document.getElementById('average-score-value').textContent = averageScore.toFixed(4);
+                document.getElementById('final-score-display').style.display = 'block';
+            }
         }
     </script>
 </body>
