@@ -146,7 +146,7 @@
                     optionItem.innerHTML = `
                         <label for="slider-${qIndex}-${i}">${option}:</label>
                         <div>
-                            <input type="range" id="slider-${qIndex}-${i}" data-question-index="${qIndex}" data-option-index="${i}" min="0" max="100" step="0.1" value="0" list="tickmarks-${qIndex}-${i}">
+                            <input type="range" id="slider-${qIndex}-${i}" data-question-index="${qIndex}" data-option-index="${i}" min="0" max="100" step="1" value="0" list="tickmarks-${qIndex}-${i}">
                             <span id="value-${qIndex}-${i}">0.00%</span>
                             <datalist id="tickmarks-${qIndex}-${i}"></datalist>
                         </div>
@@ -181,12 +181,12 @@
             if (changedOptionIndex === -1) {
                 const initialValue = 100 / slidersArray.length;
                 slidersArray.forEach(slider => {
-                    slider.value = initialValue.toFixed(1);
+                    slider.value = initialValue.toFixed(0);
                 });
                 // Ensure the sum is exactly 100 after initial distribution
                 let currentSum = slidersArray.reduce((acc, slider) => acc + parseFloat(slider.value), 0);
                 if (Math.abs(currentSum - 100) > 0.01 && slidersArray.length > 0) {
-                    slidersArray[slidersArray.length - 1].value = (parseFloat(slidersArray[slidersArray.length - 1].value) + (100 - currentSum)).toFixed(1);
+                    slidersArray[slidersArray.length - 1].value = (parseFloat(slidersArray[slidersArray.length - 1].value) + (100 - currentSum)).toFixed(0);
                 }
             }
 
@@ -212,7 +212,7 @@
                     slidersArray.forEach((slider, i) => {
                         if (i !== changedOptionIndex) {
                             let newValue = parseFloat(slider.value) * scaleFactor;
-                            slider.value = Math.max(0, Math.min(100, newValue)).toFixed(1);
+                            slider.value = Math.max(0, Math.min(100, newValue)).toFixed(0);
                         }
                     });
                 } else if (targetSumForOthers > 0 && slidersArray.length > 1) {
@@ -222,7 +222,7 @@
                     let valuePerOtherSlider = targetSumForOthers / numOtherSliders;
                     slidersArray.forEach((slider, i) => {
                         if (i !== changedOptionIndex) {
-                            slider.value = Math.max(0, Math.min(100, valuePerOtherSlider)).toFixed(1);
+                            slider.value = Math.max(0, Math.min(100, valuePerOtherSlider)).toFixed(0);
                         }
                     });
                 }
@@ -237,12 +237,12 @@
             if (Math.abs(finalSum - 100) > 0.01 && slidersArray.length > 0) {
                 let lastSlider = slidersArray[slidersArray.length - 1];
                 let lastSliderValue = parseFloat(lastSlider.value);
-                lastSlider.value = (lastSliderValue + (100 - finalSum)).toFixed(1);
+                lastSlider.value = (lastSliderValue + (100 - finalSum)).toFixed(0);
             }
 
             // Update all displayed values for the current question
             slidersArray.forEach((slider, i) => {
-                valuesForQuestion[i].textContent = `${parseFloat(slider.value).toFixed(2)}%`;
+                valuesForQuestion[i].textContent = `${parseFloat(slider.value).toFixed(0)}%`;
             });
         }
 
@@ -297,7 +297,7 @@
             });
 
             if (Math.abs(sum - 100) > 0.01) { // Allow for minor floating point inaccuracies
-                errorMessage.textContent = `Your probabilities for this question sum to ${sum.toFixed(2)}%. They must sum to 100%.`;
+                errorMessage.textContent = `Your probabilities for this question sum to ${sum.toFixed(0)}%. They must sum to 100%.`;
                 errorMessage.style.display = 'block';
                 return;
             }
@@ -306,8 +306,8 @@
             const questionData = quizData[qIndex];
             const score = calculateScore(userGuess, questionData.correctDistribution);
 
-            document.getElementById(`your-guess-${qIndex}`).textContent = userGuessPercentages.map(p => `${p.toFixed(2)}%`).join(', ');
-            document.getElementById(`correct-distribution-${qIndex}`).textContent = questionData.correctDistribution.map(p => `${(p * 100).toFixed(2)}%`).join(', ');
+            document.getElementById(`your-guess-${qIndex}`).textContent = userGuessPercentages.map(p => `${p.toFixed(0)}%`).join(', ');
+            document.getElementById(`correct-distribution-${qIndex}`).textContent = questionData.correctDistribution.map(p => `${(p * 100).toFixed(0)}%`).join(', ');
             document.getElementById(`score-value-${qIndex}`).textContent = score;
             document.getElementById(`score-display-${qIndex}`).style.display = 'block';
 
@@ -319,7 +319,7 @@
                     // Clear existing options to prevent duplicates if user resubmits
                     datalist.innerHTML = '';
                     const option = document.createElement('option');
-                    option.value = (correctProb * 100).toFixed(1); // Convert to percentage for slider value
+                    option.value = (correctProb * 100).toFixed(0); // Convert to percentage for slider value
                     datalist.appendChild(option);
                 }
             });
