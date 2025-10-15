@@ -163,8 +163,7 @@
                 slider.oninput = function() {
                     const qIndex = parseInt(this.dataset.questionIndex);
                     const oIndex = parseInt(this.dataset.optionIndex);
-                    this.dataset.locked = "true"; // Mark slider as locked when user interacts
-                    updateSliderValues(qIndex, oIndex);
+                    updateSliderValues(qIndex, oIndex, this); // Pass the changed slider element
                 };
             });
 
@@ -172,7 +171,7 @@
             quizData.forEach((_, qIndex) => updateSliderValues(qIndex, -1));
         }
 
-        function updateSliderValues(questionIndex, changedOptionIndex) {
+        function updateSliderValues(questionIndex, changedOptionIndex, changedSliderElement = null) {
             const slidersForQuestion = document.querySelectorAll(`input[type="range"][data-question-index="${questionIndex}"]`);
             const valuesForQuestion = document.querySelectorAll(`span[id^="value-${questionIndex}-"]`);
             const slidersArray = Array.from(slidersForQuestion);
@@ -183,79 +182,104 @@
 
             if (slidersArray.length === 0) return;
 
-            let lockedSliders = slidersArray.filter(slider => slider.dataset.locked === "true");
-            let unlockedSliders = slidersArray.filter(slider => slider.dataset.locked === "false");
-
-            let sumOfLocked = lockedSliders.reduce((acc, slider) => acc + parseInt(slider.value), 0);
-
-            if (changedOptionIndex !== -1) {
-                let changedSlider = slidersArray[changedOptionIndex];
+            // --- Step 1: Handle initial load or a slider set to 100% ---
+            if (changedOptionIndex === -1) { // Initial load
+                const initialValue = 100 / slidersArray.length;
+                slidersArray.forEach(slider => {
+                    slider.value = initialValue.toFixed(0);
+                    slider.dataset.locked = "false"; // Ensure all are unlocked initially
+                });
+            } else { // A slider was changed by the user
+                let changedSlider = changedSliderElement;
                 let changedValue = parseInt(changedSlider.value);
 
                 if (changedValue === 100) {
-                    // If a slider is set to 100, all other sliders must be 0
                     slidersArray.forEach(slider => {
                         if (slider !== changedSlider) {
                             slider.value = 0;
-                            slider.dataset.locked = "false"; // Unlock others if they were locked
+                            slider.dataset.locked = "false";
                         }
                     });
-                    changedSlider.value = 100; // Ensure it's exactly 100
-                    changedSlider.dataset.locked = "true"; // Ensure the 100% slider is locked
-
-                    // Update all displayed values immediately and return
+                    changedSlider.value = 100;
+                    changedSlider.dataset.locked = "true";
+                    // Update display and exit early as state is perfectly 100%
                     slidersArray.forEach((slider, i) => {
                         valuesForQuestion[i].textContent = `${parseInt(slider.value)}%`;
                     });
-                    return; // Exit early as the state is consistent
-                } else if (sumOfLocked === 100 && changedSlider.dataset.locked === "false") {
+                    return;
+                }
+            }
+
+            // --- Step 2: Determine locked/unlocked state and sums AFTER potential 100% adjustment ---
+            let lockedSliders = slidersArray.filter(slider => slider.dataset.locked === "true");
+            let unlockedSliders = slidersArray.filter(slider => slider.dataset.locked === "false");
+            let sumOfLocked = lockedSliders.reduce((acc, slider) => acc + parseInt(slider.value), 0);
+
+            // --- Step 3: Handle "sum of locked is 100" error for unlocked sliders ---
+            if (changedOptionIndex !== -1 && changedSliderElement) {
+                let changedSlider = changedSliderElement;
+                let sumOfOtherLocked = 0;
+                if (changedSlider.dataset.locked === "false") { // If the changed slider was unlocked before this interaction
+                    sumOfOtherLocked = lockedSliders.filter(s => s !== changedSlider).reduce((acc, s) => acc + parseInt(s.value), 0);
+                } else { // If the changed slider was already locked
+                    sumOfOtherLocked = sumOfLocked; // All locked sliders sum
+                }
+
+                if (sumOfOtherLocked === 100 && changedSlider.dataset.locked === "false") {
                     lockErrorMessage.textContent = `The sum of previously set values is already 100%. You cannot change this slider.`;
                     lockErrorMessage.style.display = 'block';
                     changedSlider.value = 0; // Revert the slider value
-                    changedSlider.dataset.locked = "false"; // Ensure it remains unlocked
-                    // Recalculate sumOfLocked and unlockedSliders after reverting
+                    // Do not lock it, as the change was invalid.
+                    // Re-filter locked/unlocked lists after reverting changedSlider
                     lockedSliders = slidersArray.filter(slider => slider.dataset.locked === "true");
                     unlockedSliders = slidersArray.filter(slider => slider.dataset.locked === "false");
                     sumOfLocked = lockedSliders.reduce((acc, slider) => acc + parseInt(slider.value), 0);
+                } else {
+                    // If the change is valid, and it's a user interaction, lock the slider
+                    // This is where the slider gets locked if it wasn't 100% and not blocked by other locked sliders.
+                    if (changedSlider.dataset.locked === "false") { // Only lock if it wasn't already locked
+                        changedSlider.dataset.locked = "true";
+                        // Re-filter locked/unlocked lists after locking changedSlider
+                        lockedSliders = slidersArray.filter(slider => slider.dataset.locked === "true");
+                        unlockedSliders = slidersArray.filter(slider => slider.dataset.locked === "false");
+                        sumOfLocked = lockedSliders.reduce((acc, slider) => acc + parseInt(slider.value), 0);
+                    }
                 }
-                // No 'else' needed here for changedSlider.dataset.locked === "true"
-                // as the locked status is set in the oninput handler and filters handle sumOfLocked.
             }
 
+            // --- Step 4: Distribute remaining percentage among unlocked sliders ---
             let remainingPercentage = 100 - sumOfLocked;
-            let currentSumOfUnlocked = unlockedSliders.reduce((acc, slider) => acc + parseInt(slider.value), 0);
+            let currentSumOfUnlockedValues = unlockedSliders.reduce((acc, slider) => acc + parseInt(slider.value), 0);
 
             if (unlockedSliders.length > 0) {
-                if (currentSumOfUnlocked === 0) {
-                    // If all unlocked sliders are 0, distribute evenly
+                if (currentSumOfUnlockedValues === 0) {
                     let baseValue = Math.floor(remainingPercentage / unlockedSliders.length);
                     let remainder = remainingPercentage % unlockedSliders.length;
 
                     unlockedSliders.forEach((slider, index) => {
                         let value = baseValue;
                         if (index < remainder) {
-                            value++; // Distribute remainder one by one
+                            value++;
                         }
                         slider.value = Math.max(0, Math.min(100, value));
                     });
                 } else {
-                    // Distribute proportionally
                     let distributedSum = 0;
                     let newUnlockedValues = [];
                     for (let i = 0; i < unlockedSliders.length; i++) {
                         let slider = unlockedSliders[i];
-                        let proportion = parseInt(slider.value) / currentSumOfUnlocked;
+                        let proportion = parseInt(slider.value) / currentSumOfUnlockedValues;
                         let newValue = Math.round(remainingPercentage * proportion);
                         newUnlockedValues.push(Math.max(0, Math.min(100, newValue)));
                         distributedSum += newUnlockedValues[i];
                     }
 
-                    // Adjust for rounding errors to ensure sum is exactly remainingPercentage
                     let diff = remainingPercentage - distributedSum;
                     if (diff !== 0) {
-                        // Add/subtract the difference to the last unlocked slider
-                        let lastUnlockedIndex = unlockedSliders.length - 1;
-                        newUnlockedValues[lastUnlockedIndex] = Math.max(0, Math.min(100, newUnlockedValues[lastUnlockedIndex] + diff));
+                        let lastUnlockedIndex = newUnlockedValues.length - 1;
+                        if (lastUnlockedIndex >= 0) {
+                            newUnlockedValues[lastUnlockedIndex] = Math.max(0, Math.min(100, newUnlockedValues[lastUnlockedIndex] + diff));
+                        }
                     }
 
                     unlockedSliders.forEach((slider, index) => {
@@ -264,14 +288,13 @@
                 }
             }
 
-            // Final check to ensure sum is exactly 100%
+            // --- Step 5: Final check and display ---
             let finalSum = slidersArray.reduce((acc, slider) => acc + parseInt(slider.value), 0);
             if (finalSum !== 100) {
                 generalErrorMessage.textContent = `Total sum is ${finalSum}%, but should be 100%. Please adjust the values.`;
                 generalErrorMessage.style.display = 'block';
             }
 
-            // Update all displayed values for the current question
             slidersArray.forEach((slider, i) => {
                 valuesForQuestion[i].textContent = `${parseInt(slider.value)}%`;
             });
