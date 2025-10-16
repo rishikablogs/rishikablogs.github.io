@@ -1,16 +1,18 @@
 ---
-title: "Guess the Probability Distribution!"
+title: "Test your probability intuition"
 date: 2025-10-08
 description: "Test your intuition about probability distributions with this interactive quiz."
 ---
 
 ## Test Your Probability Intuition
 
-Have you ever wondered how good your intuition is when it comes to ratios or probabilities? This interactive quiz challenges you to guess the probability distribution of various scenarios. You'll enter your estimated percentages for each outcome, and then see how close your guess was to the actual distribution.
+Have you ever wondered how good your intuition is when it comes to probabilities (or ratios)? This interactive quiz challenges you to guess the probability distribution of various scenarios. You'll enter your estimated percentages for each outcome, and then see how close your guess was to the actual distribution.
 
-I am not a frontend engineer, and haven't built anything beyond a simple webpage with basic HTML. However, given the age of powerful coding assistants, I was curious to see if it can help me build this interactive quiz. I used Roo with Gemini 2.5 Flash for this. Although it was able to help me build the first version pretty quickly, I burnt a lot of time and tokens trying to get it to refine certain UI aspects, like udpating the slider values dynamically, displaying the correct answer on the sliders. I ultimately had to give up and try to understand the JavaScript and CSS code it had produced, and tinker it myself. Surprisingly, it also had trouble following simple instructions sometimes, like when I asked it to increase the size of the tickers on the answer on the sliders, it increased the font size of the answer instead :P. These struggles gave me a newfound appreciation for the hardwork and skill of frontend engineers. 
+*How I built this quiz : I am not a frontend engineer, and haven't built anything beyond a simple webpage with basic HTML. However, given the age of powerful coding assistants, I was curious to see if it can help me build this interactive quiz. I used Roo with Gemini 2.5 Flash for this. Although it was able to help me build the first version pretty quickly, I burnt a lot of time and tokens trying to get it to refine certain UI aspects, like udpating the slider values dynamically, displaying the correct answer on the sliders. I ultimately had to give up and try to understand the JavaScript and CSS code it had produced, and tinker it myself. Surprisingly, it also had trouble following simple instructions sometimes, like when I asked it to increase the size of the tickers on the answer on the sliders, it increased the font size of the answer instead :P. These struggles gave me a newfound appreciation for the hardwork and skill of frontend engineers.*
 
-I have implemented a pretty simple scoring mechanism currently, by using Jensen Shannon divergence, but I realize this is not a great scoring mechanism, and might modify it to capture more meaningful/intuitive aspects of the similarity between the guess and the answer.
+*I have implemented a pretty simple scoring mechanism currently, by using Jensen Shannon divergence, but I realize this is not a great scoring mechanism, and might modify it to capture more meaningful/intuitive aspects of the similarity between the guess and the answer.*
+
+*I also intend to add some more interesting questions to this quiz, and pull live/latest data for the answers, instead of static, hard-coded answers*
 
 <style>
     body {
